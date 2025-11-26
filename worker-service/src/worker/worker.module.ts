@@ -6,9 +6,7 @@ import { ExecutionProcessor } from './execution.processor';
 import { LanguageServerManager } from './language-server-manager';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([ExecutionJob, ExecutionJobStatusLog]),
-  ],
+  imports: [TypeOrmModule.forFeature([ExecutionJob, ExecutionJobStatusLog])],
   providers: [ExecutionProcessor, LanguageServerManager],
 })
 export class WorkerModule {}
