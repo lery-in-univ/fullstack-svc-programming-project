@@ -1,0 +1,7 @@
+FROM node:24.11.0-alpine
+
+ENV NODE_ENV=debug
+WORKDIR /app
+
+# 코드 파일은 volume mount로 불러옴
+CMD ["npm", "run", "start"]

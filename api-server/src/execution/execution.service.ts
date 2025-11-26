@@ -1,4 +1,9 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
 import { ExecutionJob } from 'src/entities/execution-job.entity';
@@ -9,6 +14,7 @@ import { DataSource, Repository } from 'typeorm';
 import { ulid } from 'ulid';
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { SessionsService } from '../sessions/sessions.service';
 
 @Injectable()
 export class ExecutionService {
@@ -20,26 +26,37 @@ export class ExecutionService {
 
     @Inject(EXECUTION_QUEUE)
     private readonly executionQueue: Queue,
+
+    private readonly sessionsService: SessionsService,
   ) {}
 
   async createExecutionJob(
     userId: string,
-    file: Express.Multer.File,
+    sessionId: string,
   ): Promise<ExecutionJob> {
-    const fileExtension = file.originalname.substring(
-      file.originalname.lastIndexOf('.'),
-    );
-    const fileName = `${ulid()}${fileExtension}`;
+    const fileName = 'main.dart'; // 항상 고정
 
+    // 1. 세션 소유권 검증
+    const sessionData = await this.sessionsService.getSession(sessionId);
+    if (!sessionData) {
+      throw new NotFoundException('Session not found');
+    }
+    if (sessionData.userId !== userId) {
+      throw new ForbiddenException('Session does not belong to user');
+    }
+
+    // 2. main.dart 파일 존재 확인
     const basePath = process.env.CODE_FILES_PATH || '/code-files';
+    const fullPath = join(basePath, sessionId, fileName);
+    try {
+      await fs.access(fullPath);
+    } catch {
+      throw new NotFoundException(
+        `File ${fileName} not found in session ${sessionId}`,
+      );
+    }
 
-    await fs.mkdir(basePath, { recursive: true });
-
-    const fullPath = join(basePath, fileName);
-    await fs.writeFile(fullPath, file.buffer);
-
-    const relativeFilePath = fileName;
-
+    // 3. sessionId와 fileName으로 job 생성
     const newJob = await this.dataSource.transaction(async (em) => {
       const executionJobRepository = em.getRepository(ExecutionJob);
       const executionJobStatusLogRepository = em.getRepository(
@@ -52,7 +69,8 @@ export class ExecutionService {
       const newJob = executionJobRepository.create({
         id: jobId,
         userId,
-        filePath: relativeFilePath,
+        sessionId,
+        filePath: fileName,
         createdAt: now,
       });
       await executionJobRepository.save(newJob);
@@ -68,10 +86,13 @@ export class ExecutionService {
       return newJob;
     });
 
-    // Publish execution task to BullMQ after DB transaction commits
+    // 4. 큐에 발행
     await this.executionQueue.add('execute-code', {
       jobId: newJob.id,
     });
+
+    // 5. 세션 TTL 갱신
+    await this.sessionsService.updateLastActivity(sessionId);
 
     return newJob;
   }

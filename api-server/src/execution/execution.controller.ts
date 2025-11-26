@@ -5,10 +5,8 @@ import {
   NotFoundException,
   Param,
   Post,
-  UploadedFile,
-  UseInterceptors,
+  Body,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { Auth } from 'src/auth/auth.decorator';
 import { GetRequester } from 'src/auth/requester.decorator';
 import type { Requester } from 'src/auth/requester.decorator';
@@ -22,40 +20,17 @@ export class ExecutionController {
 
   @Auth()
   @Post('/execution-jobs')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: 1 * 1024 * 1024, // 1MB
-      },
-      fileFilter: (_req, file, callback) => {
-        const allowedExtensions = ['.dart'];
-        const ext = file.originalname.substring(
-          file.originalname.lastIndexOf('.'),
-        );
-        if (allowedExtensions.includes(ext)) {
-          callback(null, true);
-        } else {
-          callback(
-            new BadRequestException(
-              `File type not allowed. Only .dart files are allowed.`,
-            ),
-            false,
-          );
-        }
-      },
-    }),
-  )
   async createExecutionJob(
     @GetRequester() requester: Requester,
-    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { sessionId: string },
   ) {
-    if (!file) {
-      throw new BadRequestException('File is required');
+    if (!body.sessionId) {
+      throw new BadRequestException('sessionId is required');
     }
 
     const job = await this.executionService.createExecutionJob(
       requester.userId,
-      file,
+      body.sessionId,
     );
 
     return {

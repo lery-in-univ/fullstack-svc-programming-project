@@ -1,8 +1,13 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import Docker from 'dockerode';
-import Redis from 'ioredis';
-import { promises as fs } from 'fs';
-import { join } from 'path';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from "@nestjs/common";
+import Docker from "dockerode";
+import Redis from "ioredis";
+import { promises as fs } from "fs";
+import { join } from "path";
 
 interface SessionData {
   userId: string;
@@ -19,19 +24,19 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
   private readonly redis: Redis;
   private readonly containerMap: Map<string, string> = new Map();
   private cleanupInterval: NodeJS.Timeout | null = null;
-  private readonly LSP_NETWORK_NAME = 'backend';
+  private readonly LSP_NETWORK_NAME = "backend";
   private readonly LSP_CONTAINER_PORT = 9000;
 
   constructor() {
-    this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    this.docker = new Docker({ socketPath: "/var/run/docker.sock" });
     this.redis = new Redis({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      host: process.env.REDIS_HOST || "localhost",
+      port: parseInt(process.env.REDIS_PORT || "6379", 10),
     });
   }
 
   async onModuleInit() {
-    this.logger.log('Language Server Manager initialized');
+    this.logger.log("Language Server Manager initialized");
     this.startCleanupWorker();
     this.startSessionScanner();
   }
@@ -43,7 +48,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
 
     await this.stopAllContainers();
     await this.redis.quit();
-    this.logger.log('Language Server Manager destroyed');
+    this.logger.log("Language Server Manager destroyed");
   }
 
   private startSessionScanner() {
@@ -51,16 +56,16 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
       try {
         await this.scanAndCreateContainers();
       } catch (error) {
-        this.logger.error('Error scanning sessions', error);
+        this.logger.error("Error scanning sessions", error);
       }
     }, 5000);
   }
 
   private async scanAndCreateContainers() {
-    const keys = await this.redis.keys('lsp:session:*');
+    const keys = await this.redis.keys("lsp:session:*");
 
     for (const key of keys) {
-      const sessionId = key.replace('lsp:session:', '');
+      const sessionId = key.replace("lsp:session:", "");
 
       if (this.containerMap.has(sessionId)) {
         continue;
@@ -80,33 +85,31 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
           this.containerMap.set(sessionId, sessionData.containerId);
         }
       } catch (error) {
-        this.logger.error(`Error creating container for session ${sessionId}`, error);
+        this.logger.error(
+          `Error creating container for session ${sessionId}`,
+          error
+        );
       }
     }
   }
 
-  private async startContainer(sessionId: string, userId: string): Promise<void> {
+  private async startContainer(
+    sessionId: string,
+    userId: string
+  ): Promise<void> {
     this.logger.log(`Starting container for session ${sessionId}`);
 
     const containerName = `lsp-${sessionId}`;
+    const volumeName = process.env.CODE_FILES_VOLUME || "code-files";
 
-    // Prepare volume mount for session files
-    const basePath = process.env.LSP_FILES_PATH || '/lsp-files';
-    const sessionDir = join(basePath, sessionId);
-
-    // Create session directory if it doesn't exist
-    await fs.mkdir(sessionDir, { recursive: true });
-
-    // Use the named volume for LSP file sharing (similar to code-files pattern)
-    const volumeName = process.env.LSP_FILES_VOLUME || 'fullstack-svc-programming-backend_lsp-files';
-    const containerBasePath = '/lsp-files';
+    const containerBasePath = "/code-files";
     const containerWorkspace = `${containerBasePath}/${sessionId}`;
 
     const container = await this.docker.createContainer({
-      Image: 'dart-lsp:3.9.4',
+      Image: "dart-lsp:3.9.4",
       name: containerName,
       ExposedPorts: {
-        [`${this.LSP_CONTAINER_PORT}/tcp`]: {}
+        [`${this.LSP_CONTAINER_PORT}/tcp`]: {},
       },
       HostConfig: {
         Memory: 512 * 1024 * 1024,
@@ -137,7 +140,9 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    this.logger.log(`Container ${containerId} (${containerName}) started for session ${sessionId} with volume ${volumeName}:${containerBasePath}, working dir: ${containerWorkspace}`);
+    this.logger.log(
+      `Container ${containerId} (${containerName}) started for session ${sessionId} with volume ${volumeName}:${containerBasePath}, working dir: ${containerWorkspace}`
+    );
   }
 
   private startCleanupWorker() {
@@ -145,7 +150,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
       try {
         await this.cleanupExpiredSessions();
       } catch (error) {
-        this.logger.error('Error in cleanup worker', error);
+        this.logger.error("Error in cleanup worker", error);
       }
     }, 10000);
   }
@@ -163,7 +168,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    sessionsToClean.forEach(sessionId => this.containerMap.delete(sessionId));
+    sessionsToClean.forEach((sessionId) => this.containerMap.delete(sessionId));
 
     if (sessionsToClean.length > 0) {
       this.logger.log(`Cleaned up ${sessionsToClean.length} expired sessions`);
@@ -177,17 +182,22 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
       await container.stop({ t: 5 });
       await container.remove();
 
-      this.logger.log(`Container ${containerId} stopped for session ${sessionId}`);
+      this.logger.log(
+        `Container ${containerId} stopped for session ${sessionId}`
+      );
 
       // Clean up session files
-      const basePath = process.env.LSP_FILES_PATH || '/lsp-files';
+      const basePath = process.env.CODE_FILES_PATH || "/code-files";
       const sessionDir = join(basePath, sessionId);
 
       try {
         await fs.rm(sessionDir, { recursive: true, force: true });
         this.logger.log(`Cleaned up files for session ${sessionId}`);
       } catch (error) {
-        this.logger.error(`Error cleaning up files for session ${sessionId}`, error);
+        this.logger.error(
+          `Error cleaning up files for session ${sessionId}`,
+          error
+        );
       }
     } catch (error) {
       this.logger.error(`Error stopping container ${containerId}`, error);
@@ -195,7 +205,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
   }
 
   private async stopAllContainers() {
-    this.logger.log('Stopping all language server containers');
+    this.logger.log("Stopping all language server containers");
 
     const stopPromises = Array.from(this.containerMap.entries()).map(
       ([sessionId, containerId]) => this.stopContainer(containerId, sessionId)

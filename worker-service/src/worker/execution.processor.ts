@@ -6,7 +6,6 @@ import { ExecutionJob } from "../entities/execution-job.entity";
 import { ExecutionJobStatusLog } from "../entities/execution-job-status-log.entity";
 import { ExecutionJobStatus } from "../entities/execution-job-status";
 import { redisConfig } from "../config/redis.config";
-import { promises as fs } from "fs";
 import { join } from "path";
 import { ulid } from "ulid";
 import Docker, { Container } from "dockerode";
@@ -77,25 +76,21 @@ export class ExecutionProcessor implements OnModuleInit, OnModuleDestroy {
       await this.createStatusLog(jobId, ExecutionJobStatus.READY);
 
       const basePath = process.env.CODE_FILES_PATH || "/code-files";
-      const fullPath = join(basePath, executionJob.filePath);
-
-      await fs.access(fullPath);
-      console.log(`File found at: ${fullPath}`);
-
-      await this.createStatusLog(jobId, ExecutionJobStatus.RUNNING);
+      const fullPath = join(
+        basePath,
+        executionJob.sessionId,
+        executionJob.filePath
+      );
 
       console.log("Creating Dart container...");
 
-      const volumeName =
-        process.env.CODE_FILES_VOLUME ||
-        "fullstack-svc-programming-backend_code-files";
-      const containerFilePath = `/code-files/${executionJob.filePath}`;
-
+      const volumeName = process.env.CODE_FILES_VOLUME || "code-files";
       const container = (await this.docker.createContainer({
         Image: "dart:3.9.4",
-        Cmd: ["dart", "run", containerFilePath],
+        Cmd: ["dart", "run", fullPath],
         AttachStdout: true,
         AttachStderr: true,
+        Tty: true,
         HostConfig: {
           Binds: [`${volumeName}:/code-files:ro`],
           Memory: 256 * 1024 * 1024, // 256MB
@@ -107,6 +102,8 @@ export class ExecutionProcessor implements OnModuleInit, OnModuleDestroy {
       console.log(`Container created: ${container.id}`);
 
       await container.start();
+      await this.createStatusLog(jobId, ExecutionJobStatus.RUNNING);
+
       console.log("Container started");
 
       // 30초 타임아웃 적용

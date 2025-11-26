@@ -11,7 +11,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger, UnauthorizedException } from '@nestjs/common';
 import Docker from 'dockerode';
 import * as net from 'net';
-import { LanguageServerService } from './language-server.service';
+import { SessionsService } from '../sessions/sessions.service';
 import { TokenManager } from '../util/token-manager';
 import type { Requester } from '../auth/requester.decorator';
 import { LspUriTransformer } from './lsp-uri-transformer';
@@ -37,7 +37,7 @@ export class LanguageServerGateway
   private readonly LSP_CONTAINER_PORT = 9000;
 
   constructor(
-    private readonly languageServerService: LanguageServerService,
+    private readonly sessionsService: SessionsService,
     private readonly tokenManager: TokenManager,
   ) {
     this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
@@ -87,7 +87,7 @@ export class LanguageServerGateway
       const { sessionId } = payload;
       const userId: string = client.data.userId;
 
-      const isOwner = await this.languageServerService.validateSessionOwnership(
+      const isOwner = await this.sessionsService.validateSessionOwnership(
         sessionId,
         userId,
       );
@@ -99,14 +99,14 @@ export class LanguageServerGateway
         return;
       }
 
-      const session = await this.languageServerService.getSession(sessionId);
-      if (!session?.containerId || !session?.containerName) {
+      const session = await this.sessionsService.getSession(sessionId);
+      if (!session?.containerId) {
         client.emit('lsp-error', { error: 'Container not ready', code: 404 });
         return;
       }
 
       // Get workspace root for URI transformation
-      const workspaceRoot = session.workspaceRoot || `/lsp-files/${sessionId}`;
+      const workspaceRoot = session.workspaceRoot || `/code-files/${sessionId}`;
 
       // Get container IP address from Docker network
       const container = this.docker.getContainer(session.containerId);
@@ -172,7 +172,7 @@ export class LanguageServerGateway
         this.clientSessions.delete(client.id);
       });
 
-      await this.languageServerService.updateLastActivity(sessionId);
+      await this.sessionsService.updateLastActivity(sessionId);
 
       this.logger.log(
         `LSP connecting: client ${client.id}, session ${sessionId}`,
@@ -206,7 +206,7 @@ export class LanguageServerGateway
       this.logger.log(['Transformed message', transformedMessage].join('\n'));
 
       session.stream.write(transformedMessage);
-      await this.languageServerService.updateLastActivity(session.sessionId);
+      await this.sessionsService.updateLastActivity(session.sessionId);
     } catch (error) {
       this.logger.error('Failed to send message to LSP', error);
       client.emit('lsp-error', { error: 'Failed to send message', code: 500 });
