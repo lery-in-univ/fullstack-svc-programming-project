@@ -9,34 +9,23 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionsService } from '../sessions/sessions.service';
-import { Auth } from '../auth/auth.decorator';
-import { GetRequester } from '../auth/requester.decorator';
-import type { Requester } from '../auth/requester.decorator';
 import { CreateSessionResponseDto } from './dto/create-session-response.dto';
 
 @Controller('language-server')
 export class LanguageServerController {
   constructor(private readonly sessionsService: SessionsService) {}
 
-  @Auth()
   @Post('sessions')
-  async createSession(
-    @GetRequester() requester: Requester,
-  ): Promise<CreateSessionResponseDto> {
-    return this.sessionsService.createSession(requester.userId);
+  async createSession(): Promise<CreateSessionResponseDto> {
+    return this.sessionsService.createSession();
   }
 
-  @Auth()
   @HttpCode(200)
   @Post('sessions/:sessionId/renew')
-  async renewSession(
-    @Param('sessionId') sessionId: string,
-    @GetRequester() requester: Requester,
-  ): Promise<void> {
-    return this.sessionsService.renewSession(sessionId, requester.userId);
+  async renewSession(@Param('sessionId') sessionId: string): Promise<void> {
+    return this.sessionsService.renewSession(sessionId);
   }
 
-  @Auth()
   @Post('sessions/:sessionId/files')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -63,18 +52,13 @@ export class LanguageServerController {
   )
   async uploadFile(
     @Param('sessionId') sessionId: string,
-    @GetRequester() requester: Requester,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
 
-    const result = await this.sessionsService.updateFile(
-      sessionId,
-      requester.userId,
-      file,
-    );
+    const result = await this.sessionsService.updateFile(sessionId, file);
 
     return result;
   }

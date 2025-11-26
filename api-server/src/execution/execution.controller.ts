@@ -7,9 +7,6 @@ import {
   Post,
   Body,
 } from '@nestjs/common';
-import { Auth } from 'src/auth/auth.decorator';
-import { GetRequester } from 'src/auth/requester.decorator';
-import type { Requester } from 'src/auth/requester.decorator';
 import { ExecutionService } from './execution.service';
 import { ExecutionJob } from 'src/entities/execution-job.entity';
 import { ExecutionJobStatusLog } from 'src/entities/execution-job-status-log.entity';
@@ -18,20 +15,13 @@ import { ExecutionJobStatusLog } from 'src/entities/execution-job-status-log.ent
 export class ExecutionController {
   constructor(private readonly executionService: ExecutionService) {}
 
-  @Auth()
   @Post('/execution-jobs')
-  async createExecutionJob(
-    @GetRequester() requester: Requester,
-    @Body() body: { sessionId: string },
-  ) {
+  async createExecutionJob(@Body() body: { sessionId: string }) {
     if (!body.sessionId) {
       throw new BadRequestException('sessionId is required');
     }
 
-    const job = await this.executionService.createExecutionJob(
-      requester.userId,
-      body.sessionId,
-    );
+    const job = await this.executionService.createExecutionJob(body.sessionId);
 
     return {
       id: job.id,
@@ -40,12 +30,10 @@ export class ExecutionController {
     };
   }
 
-  @Auth()
-  @Get('/execution-jobs')
-  async getExecutionJobs(@GetRequester() requester: Requester) {
-    const jobs = await this.executionService.findExecutionJobsByUserId(
-      requester.userId,
-    );
+  @Get('/sessions/:sessionId/execution-jobs')
+  async getExecutionJobs(@Param('sessionId') sessionId: string) {
+    const jobs =
+      await this.executionService.findExecutionJobsBySessionId(sessionId);
 
     return jobs.map((job: ExecutionJob) => {
       const statuses: ExecutionJobStatusLog[] = job.statuses || [];
@@ -65,16 +53,9 @@ export class ExecutionController {
     });
   }
 
-  @Auth()
   @Get('/execution-jobs/:jobId')
-  async getExecutionJob(
-    @GetRequester() requester: Requester,
-    @Param('jobId') id: string,
-  ) {
-    const job = await this.executionService.findExecutionJobById(
-      id,
-      requester.userId,
-    );
+  async getExecutionJob(@Param('jobId') id: string) {
+    const job = await this.executionService.findExecutionJobById(id);
 
     if (!job) {
       throw new NotFoundException('Execution job not found');

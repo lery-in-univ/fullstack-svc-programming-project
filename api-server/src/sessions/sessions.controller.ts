@@ -11,21 +11,16 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionsService } from './sessions.service';
-import { Auth } from '../auth/auth.decorator';
-import { GetRequester } from '../auth/requester.decorator';
-import type { Requester } from '../auth/requester.decorator';
 
 @Controller()
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
-  @Auth()
   @Post()
-  async createSession(@GetRequester() requester: Requester) {
-    return this.sessionsService.createSession(requester.userId);
+  async createSession() {
+    return this.sessionsService.createSession();
   }
 
-  @Auth()
   @Put('/sessions/:sessionId/files/main.dart')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -52,33 +47,24 @@ export class SessionsController {
   )
   async updateFile(
     @Param('sessionId') sessionId: string,
-    @GetRequester() requester: Requester,
     @UploadedFile() file: Express.Multer.File,
   ) {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-    return this.sessionsService.updateFile(sessionId, requester.userId, file);
+    return this.sessionsService.updateFile(sessionId, file);
   }
 
-  @Auth()
   @HttpCode(200)
   @Post('/sessions/:sessionId/renew')
-  async renewSession(
-    @Param('sessionId') sessionId: string,
-    @GetRequester() requester: Requester,
-  ) {
-    await this.sessionsService.renewSession(sessionId, requester.userId);
+  async renewSession(@Param('sessionId') sessionId: string) {
+    await this.sessionsService.renewSession(sessionId);
     return { message: 'Session renewed successfully' };
   }
 
-  @Auth()
   @HttpCode(204)
   @Delete('/sessions/:sessionId')
-  async closeSession(
-    @Param('sessionId') sessionId: string,
-    @GetRequester() requester: Requester,
-  ) {
-    await this.sessionsService.closeSession(sessionId, requester.userId);
+  async closeSession(@Param('sessionId') sessionId: string) {
+    await this.sessionsService.closeSession(sessionId);
   }
 }

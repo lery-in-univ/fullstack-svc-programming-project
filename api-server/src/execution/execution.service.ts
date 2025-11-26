@@ -2,7 +2,6 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Queue } from 'bullmq';
@@ -31,18 +30,14 @@ export class ExecutionService {
   ) {}
 
   async createExecutionJob(
-    userId: string,
     sessionId: string,
   ): Promise<ExecutionJob> {
     const fileName = 'main.dart'; // 항상 고정
 
-    // 1. 세션 소유권 검증
+    // 1. 세션 존재 확인
     const sessionData = await this.sessionsService.getSession(sessionId);
     if (!sessionData) {
       throw new NotFoundException('Session not found');
-    }
-    if (sessionData.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to user');
     }
 
     // 2. main.dart 파일 존재 확인
@@ -68,7 +63,6 @@ export class ExecutionService {
 
       const newJob = executionJobRepository.create({
         id: jobId,
-        userId,
         sessionId,
         filePath: fileName,
         createdAt: now,
@@ -97,11 +91,11 @@ export class ExecutionService {
     return newJob;
   }
 
-  async findExecutionJobsByUserId(
-    userId: string,
+  async findExecutionJobsBySessionId(
+    sessionId: string,
   ): Promise<(ExecutionJob & { statuses: ExecutionJobStatusLog[] })[]> {
     const jobs = await this.executionJobRepository.find({
-      where: { userId },
+      where: { sessionId },
       relations: { statuses: true },
       order: { createdAt: 'DESC' },
     });
@@ -110,10 +104,9 @@ export class ExecutionService {
 
   async findExecutionJobById(
     jobId: string,
-    userId: string,
   ): Promise<(ExecutionJob & { statuses: ExecutionJobStatusLog[] }) | null> {
     const job = await this.executionJobRepository.findOne({
-      where: { id: jobId, userId },
+      where: { id: jobId },
       relations: { statuses: true },
     });
     return job as (ExecutionJob & { statuses: ExecutionJobStatusLog[] }) | null;

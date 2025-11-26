@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
   BadRequestException,
   OnModuleInit,
   OnModuleDestroy,
@@ -12,7 +11,6 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 
 export interface SessionData {
-  userId: string;
   sessionId: string;
   createdAt: string;
   lastActivity: string;
@@ -66,7 +64,7 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return count ? parseInt(count, 10) : 0;
   }
 
-  async createSession(userId: string): Promise<{ sessionId: string }> {
+  async createSession(): Promise<{ sessionId: string }> {
     // Check capacity
     const activeCount = await this.getActiveSessionCount();
     if (activeCount >= this.MAX_SESSIONS) {
@@ -94,7 +92,6 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
 
     // Initialize session data
     const sessionData: SessionData = {
-      userId,
       sessionId,
       createdAt: new Date().toISOString(),
       lastActivity: new Date().toISOString(),
@@ -118,16 +115,12 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
 
   async updateFile(
     sessionId: string,
-    userId: string,
     file: Express.Multer.File,
   ): Promise<{ filePath: string }> {
-    // Validate session ownership
+    // Validate session exists
     const sessionData = await this.getSession(sessionId);
     if (!sessionData) {
       throw new NotFoundException('Session not found');
-    }
-    if (sessionData.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to user');
     }
 
     // Validate file extension
@@ -151,7 +144,7 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return { filePath: `/code-files/${sessionId}/main.dart` };
   }
 
-  async renewSession(sessionId: string, userId: string): Promise<void> {
+  async renewSession(sessionId: string): Promise<void> {
     const key = `lsp:session:${sessionId}`;
     const data = await this.redis.get(key);
 
@@ -161,24 +154,16 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
 
     const sessionData = JSON.parse(data) as SessionData;
 
-    if (sessionData.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to user');
-    }
-
     // Update lastActivity and reset TTL
     sessionData.lastActivity = new Date().toISOString();
     await this.redis.setex(key, this.SESSION_TTL, JSON.stringify(sessionData));
   }
 
-  async closeSession(sessionId: string, userId: string): Promise<void> {
+  async closeSession(sessionId: string): Promise<void> {
     const sessionData = await this.getSession(sessionId);
 
     if (!sessionData) {
       throw new NotFoundException('Session not found');
-    }
-
-    if (sessionData.userId !== userId) {
-      throw new ForbiddenException('Session does not belong to user');
     }
 
     // Set TTL to 1s for immediate cleanup
@@ -193,13 +178,6 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return data ? (JSON.parse(data) as SessionData) : null;
   }
 
-  async validateSessionOwnership(
-    sessionId: string,
-    userId: string,
-  ): Promise<boolean> {
-    const sessionData = await this.getSession(sessionId);
-    return sessionData?.userId === userId;
-  }
 
   async updateLastActivity(sessionId: string): Promise<void> {
     const key = `lsp:session:${sessionId}`;

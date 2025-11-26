@@ -8,18 +8,15 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import Docker from 'dockerode';
 import * as net from 'net';
 import { SessionsService } from '../sessions/sessions.service';
-import { TokenManager } from '../util/token-manager';
-import type { Requester } from '../auth/requester.decorator';
 import { LspUriTransformer } from './lsp-uri-transformer';
 import { LspResponseBuffer } from './lsp-response-buffer';
 
 interface ClientSession {
   sessionId: string;
-  userId: string;
   stream: net.Socket;
   workspaceRoot: string;
 }
@@ -36,33 +33,12 @@ export class LanguageServerGateway
   private readonly clientSessions = new Map<string, ClientSession>();
   private readonly LSP_CONTAINER_PORT = 9000;
 
-  constructor(
-    private readonly sessionsService: SessionsService,
-    private readonly tokenManager: TokenManager,
-  ) {
+  constructor(private readonly sessionsService: SessionsService) {
     this.docker = new Docker({ socketPath: '/var/run/docker.sock' });
   }
 
   handleConnection(client: Socket) {
-    try {
-      const token: string =
-        client.handshake.auth.token ?? client.handshake.headers.authorization;
-
-      if (!token) {
-        throw new UnauthorizedException('No token provided');
-      }
-
-      const tokenString = token.replace('Bearer ', '');
-      const payload = this.tokenManager.verify<Requester>(tokenString);
-
-      client.data.userId = payload.userId;
-      this.logger.log(
-        `Client connected: ${client.id}, userId: ${payload.userId}`,
-      );
-    } catch (error) {
-      this.logger.error('Connection authentication failed', error);
-      client.disconnect();
-    }
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
@@ -85,19 +61,6 @@ export class LanguageServerGateway
 
     try {
       const { sessionId } = payload;
-      const userId: string = client.data.userId;
-
-      const isOwner = await this.sessionsService.validateSessionOwnership(
-        sessionId,
-        userId,
-      );
-      if (!isOwner) {
-        client.emit('lsp-error', {
-          error: 'Session not found or access denied',
-          code: 403,
-        });
-        return;
-      }
 
       const session = await this.sessionsService.getSession(sessionId);
       if (!session?.containerId) {
@@ -135,7 +98,6 @@ export class LanguageServerGateway
 
         this.clientSessions.set(client.id, {
           sessionId,
-          userId,
           stream: tcpSocket,
           workspaceRoot,
         });

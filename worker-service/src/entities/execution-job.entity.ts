@@ -7,9 +7,6 @@ export class ExecutionJob {
   id: string;
 
   @Column({ type: 'varchar', length: 50 })
-  userId: string;
-
-  @Column({ type: 'varchar', length: 50 })
   sessionId: string;
 
   @Column({ type: 'varchar', length: 200 })
