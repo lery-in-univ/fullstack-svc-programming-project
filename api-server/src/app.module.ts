@@ -4,7 +4,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { typeOrmConfig } from './config/typeorm.config';
 import { ExecutionModule } from './execution/execution.module';
-import { LanguageServerModule } from './language-server/language-server.module';
 import { SessionsModule } from './sessions/sessions.module';
 
 @Module({
@@ -12,7 +11,6 @@ import { SessionsModule } from './sessions/sessions.module';
     TypeOrmModule.forRoot(typeOrmConfig),
     SessionsModule,
     ExecutionModule,
-    LanguageServerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

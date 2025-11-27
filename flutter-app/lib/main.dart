@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'pages/home_page.dart';
-import 'pages/execution_test_page.dart';
-import 'pages/keyboard_demo_page.dart';
+import 'pages/ide_screen.dart';
 import 'services/api_client.dart';
 import 'services/session_manager.dart';
 
@@ -44,11 +43,10 @@ class _MyAppState extends State<MyApp> {
       ),
       home: HomePage(sessionManager: sessionManager),
       routes: {
-        '/execution-test': (context) => ExecutionTestPage(
+        '/ide': (context) => IdeScreen(
               sessionManager: sessionManager,
               apiClient: apiClient,
             ),
-        '/keyboard-demo': (context) => const KeyboardDemoPage(),
       },
     );
   }

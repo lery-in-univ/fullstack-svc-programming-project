@@ -35,6 +35,14 @@ class ApiClient {
     }
   }
 
+  Future<Response> put(String path, {dynamic data}) async {
+    try {
+      return await dio.put(path, data: data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Exception _handleError(DioException e) {
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

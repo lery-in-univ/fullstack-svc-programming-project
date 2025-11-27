@@ -21,10 +21,7 @@ class QwertyKeyboard extends StatefulWidget {
   /// Callback function when a key is pressed
   final void Function(KeyboardEvent event) onKeyPressed;
 
-  const QwertyKeyboard({
-    super.key,
-    required this.onKeyPressed,
-  });
+  const QwertyKeyboard({super.key, required this.onKeyPressed});
 
   @override
   State<QwertyKeyboard> createState() => _QwertyKeyboardState();
@@ -57,43 +54,46 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     // Handle special keys
     if (lowerKey == KeyboardConfig.shiftKey) {
       _keyboardState.toggleShift();
-      widget.onKeyPressed(KeyboardEvent(
-        character: '',
-        type: KeyType.shift,
-        isShiftActive: _keyboardState.isShiftActive,
-      ));
+      widget.onKeyPressed(
+        KeyboardEvent(
+          character: '',
+          type: KeyType.shift,
+          isShiftActive: _keyboardState.isShiftActive,
+        ),
+      );
       return;
     }
 
     if (lowerKey == KeyboardConfig.backspaceKey) {
-      widget.onKeyPressed(const KeyboardEvent(
-        character: '',
-        type: KeyType.backspace,
-      ));
+      widget.onKeyPressed(
+        const KeyboardEvent(character: '', type: KeyType.backspace),
+      );
       return;
     }
 
     if (lowerKey == KeyboardConfig.spaceKey) {
-      widget.onKeyPressed(const KeyboardEvent(
-        character: ' ',
-        type: KeyType.space,
-      ));
+      widget.onKeyPressed(
+        const KeyboardEvent(character: ' ', type: KeyType.space),
+      );
       return;
     }
 
     // Handle normal character keys
     final character = _keyboardState.isShiftActive ? key.toUpperCase() : key;
-    widget.onKeyPressed(KeyboardEvent(
-      character: character,
-      type: KeyType.normal,
-      isShiftActive: _keyboardState.isShiftActive,
-    ));
+    widget.onKeyPressed(
+      KeyboardEvent(
+        character: character,
+        type: KeyType.normal,
+        isShiftActive: _keyboardState.isShiftActive,
+      ),
+    );
   }
 
   /// Calculates the base key width based on screen width
   double _calculateBaseKeyWidth(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final availableWidth = screenWidth -
+    final availableWidth =
+        screenWidth -
         (KeyboardConfig.keyboardHorizontalPadding * 2) -
         (KeyboardConfig.keyPadding * 2 * 10); // padding for 10 keys
 
@@ -137,7 +137,7 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
             keys: [
               KeyboardConfig.shiftKey,
               ...KeyboardConfig.qwertyLayout[2],
-              KeyboardConfig.backspaceKey
+              KeyboardConfig.backspaceKey,
             ],
             onKeyPressed: _handleKeyPress,
             isShiftActive: _keyboardState.isShiftActive,
@@ -145,7 +145,16 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
           ),
           const SizedBox(height: KeyboardConfig.rowSpacing),
 
-          // Row 4: [Space]
+          // Row 4: ( ) { } ; '
+          KeyboardRow(
+            keys: KeyboardConfig.qwertyLayout[3],
+            onKeyPressed: _handleKeyPress,
+            isShiftActive: _keyboardState.isShiftActive,
+            keyWidth: baseKeyWidth,
+          ),
+          const SizedBox(height: KeyboardConfig.rowSpacing),
+
+          // Row 5: [Space]
           KeyboardRow(
             keys: [KeyboardConfig.spaceKey],
             onKeyPressed: _handleKeyPress,

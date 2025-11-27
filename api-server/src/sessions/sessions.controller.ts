@@ -4,55 +4,30 @@ import {
   Put,
   Delete,
   Param,
-  UseInterceptors,
-  UploadedFile,
+  Body,
   HttpCode,
   BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { SessionsService } from './sessions.service';
 
 @Controller()
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
-  @Post()
+  @Post('sessions')
   async createSession() {
     return this.sessionsService.createSession();
   }
 
-  @Put('/sessions/:sessionId/files/main.dart')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      limits: {
-        fileSize: 1 * 1024 * 1024, // 1MB
-      },
-      fileFilter: (_req, file, callback) => {
-        const allowedExtensions = ['.dart'];
-        const ext = file.originalname.substring(
-          file.originalname.lastIndexOf('.'),
-        );
-        if (allowedExtensions.includes(ext)) {
-          callback(null, true);
-        } else {
-          callback(
-            new BadRequestException(
-              'File type not allowed. Only .dart files are allowed.',
-            ),
-            false,
-          );
-        }
-      },
-    }),
-  )
+  @Put('/sessions/:sessionId/files')
   async updateFile(
     @Param('sessionId') sessionId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @Body() body: { content: string },
   ) {
-    if (!file) {
-      throw new BadRequestException('File is required');
+    if (!body.content) {
+      throw new BadRequestException('Content is required');
     }
-    return this.sessionsService.updateFile(sessionId, file);
+    return this.sessionsService.updateFileFromBase64(sessionId, body.content);
   }
 
   @HttpCode(200)

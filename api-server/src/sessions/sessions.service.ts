@@ -113,9 +113,9 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return { sessionId };
   }
 
-  async updateFile(
+  async updateFileFromBase64(
     sessionId: string,
-    file: Express.Multer.File,
+    base64Content: string,
   ): Promise<{ filePath: string }> {
     // Validate session exists
     const sessionData = await this.getSession(sessionId);
@@ -123,20 +123,23 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
       throw new NotFoundException('Session not found');
     }
 
-    // Validate file extension
-    if (!file.originalname.endsWith('.dart')) {
-      throw new BadRequestException('Only .dart files are allowed');
+    // Decode base64
+    let decodedContent: string;
+    try {
+      decodedContent = Buffer.from(base64Content, 'base64').toString('utf-8');
+    } catch {
+      throw new BadRequestException('Invalid base64 content');
     }
 
     // Validate file size (1MB)
-    if (file.size > 1 * 1024 * 1024) {
+    if (Buffer.byteLength(decodedContent, 'utf-8') > 1 * 1024 * 1024) {
       throw new BadRequestException('File size must be less than 1MB');
     }
 
     // Overwrite main.dart
     const basePath = process.env.CODE_FILES_PATH || '/code-files';
     const filePath = join(basePath, sessionId, 'main.dart');
-    await fs.writeFile(filePath, file.buffer);
+    await fs.writeFile(filePath, decodedContent, 'utf-8');
 
     // Update session activity
     await this.updateLastActivity(sessionId);

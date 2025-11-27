@@ -25,8 +25,8 @@ class _HomePageState extends State<HomePage> {
 
   void _onSessionStateChanged() {
     if (widget.sessionManager.isReady) {
-      // 세션 준비 완료 → ExecutionTestPage로 자동 이동
-      Navigator.pushReplacementNamed(context, '/execution-test');
+      // 세션 준비 완료 → IDE 화면으로 자동 이동
+      Navigator.pushReplacementNamed(context, '/ide');
     }
     setState(() {});
   }
@@ -125,20 +125,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ],
-
-              const SizedBox(height: 32),
-
-              // 키보드 데모 바로가기 (세션 없이도 접근 가능)
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/keyboard-demo');
-                },
-                icon: const Icon(Icons.keyboard),
-                label: const Text('키보드 데모'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.all(16.0),
-                ),
-              ),
             ],
           ),
         ),
