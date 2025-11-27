@@ -1,12 +1,37 @@
 import 'package:flutter/material.dart';
+import 'pages/home_page.dart';
+import 'pages/execution_test_page.dart';
 import 'pages/keyboard_demo_page.dart';
+import 'services/api_client.dart';
+import 'services/session_manager.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final ApiClient apiClient;
+  late final SessionManager sessionManager;
+
+  @override
+  void initState() {
+    super.initState();
+    apiClient = ApiClient();
+    sessionManager = SessionManager(apiClient);
+  }
+
+  @override
+  void dispose() {
+    sessionManager.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +42,14 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const KeyboardDemoPage(),
+      home: HomePage(sessionManager: sessionManager),
+      routes: {
+        '/execution-test': (context) => ExecutionTestPage(
+              sessionManager: sessionManager,
+              apiClient: apiClient,
+            ),
+        '/keyboard-demo': (context) => const KeyboardDemoPage(),
+      },
     );
   }
 }
