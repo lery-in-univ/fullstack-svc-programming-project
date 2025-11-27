@@ -178,7 +178,6 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
     return data ? (JSON.parse(data) as SessionData) : null;
   }
 
-
   async updateLastActivity(sessionId: string): Promise<void> {
     const key = `lsp:session:${sessionId}`;
     const data = await this.redis.get(key);
