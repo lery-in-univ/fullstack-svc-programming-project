@@ -2,7 +2,6 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 
 import { ExecutionJobStatusLog } from 'src/entities/execution-job-status-log.entity';
 import { ExecutionJob } from 'src/entities/execution-job.entity';
-import { User } from 'src/entities/user.entity';
 
 export const typeOrmConfig: TypeOrmModuleOptions = {
   type: 'mysql',
@@ -11,6 +10,6 @@ export const typeOrmConfig: TypeOrmModuleOptions = {
   username: process.env.DB_USERNAME || 'root',
   password: process.env.DB_PASSWORD || 'test',
   database: process.env.DB_DATABASE || 'Hello',
-  entities: [User, ExecutionJob, ExecutionJobStatusLog],
+  entities: [ExecutionJob, ExecutionJobStatusLog],
   synchronize: false,
 };
