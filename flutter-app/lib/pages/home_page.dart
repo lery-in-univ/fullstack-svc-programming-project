@@ -24,8 +24,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onSessionStateChanged() {
-    if (widget.sessionManager.isReady) {
-      // 세션 준비 완료 → IDE 화면으로 자동 이동
+    if (widget.sessionManager.isFullyReady) {
+      // LSP 초기화 완료 → IDE 화면으로 자동 이동
       Navigator.pushReplacementNamed(context, '/ide');
     }
     setState(() {});
@@ -89,6 +89,26 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+              ] else if (state == SessionState.connectingWebSocket) ...[
+                const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('WebSocket 연결 중...'),
+                    ],
+                  ),
+                ),
+              ] else if (state == SessionState.lspInitializing) ...[
+                const Center(
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('LSP 초기화 중...'),
+                    ],
+                  ),
+                ),
               ] else if (state == SessionState.error) ...[
                 Card(
                   color: Colors.red.shade50,
@@ -107,7 +127,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          widget.sessionManager.errorMessage ?? '알 수 없는 오류',
+                          widget.sessionManager.websocketErrorMessage ??
+                              widget.sessionManager.errorMessage ??
+                              '알 수 없는 오류',
                           style: Theme.of(context).textTheme.bodySmall,
                           textAlign: TextAlign.center,
                         ),

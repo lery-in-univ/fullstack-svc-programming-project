@@ -5,7 +5,7 @@ import '../services/execution_api.dart';
 import '../services/session_api.dart';
 import '../models/key_event.dart';
 import '../widgets/keyboard/qwerty_keyboard.dart';
-import '../widgets/text_input_area.dart';
+import '../widgets/code_editor.dart';
 
 enum ExecutionStatus {
   idle,
@@ -32,7 +32,7 @@ class IdeScreen extends StatefulWidget {
 class _IdeScreenState extends State<IdeScreen> {
   late final ExecutionApi _executionApi;
   late final SessionApi _sessionApi;
-  final GlobalKey<TextInputAreaState> _textInputKey = GlobalKey();
+  final GlobalKey<CodeEditorState> _codeEditorKey = GlobalKey();
 
   // UI 상태
   int _currentTabIndex = 0;
@@ -40,6 +40,13 @@ class _IdeScreenState extends State<IdeScreen> {
   // 코드 에디터 상태
   bool _needsSave = false;
   bool _isSaving = false;
+
+  // 커서 위치 추적
+  int _cursorLine = 0;
+  int _cursorCharacter = 0;
+
+  // LSP 문서 URI
+  String get _documentUri => 'file:///workspace/main.dart';
 
   // 실행 상태
   ExecutionStatus _executionStatus = ExecutionStatus.idle;
@@ -56,6 +63,9 @@ class _IdeScreenState extends State<IdeScreen> {
 
     // WebSocket 상태 변화 리스너 추가
     widget.sessionManager.lspService.addListener(_onLspServiceChanged);
+
+    // LSP 문서 열기
+    _openDocumentInLsp();
   }
 
   @override
@@ -67,7 +77,40 @@ class _IdeScreenState extends State<IdeScreen> {
   void _onLspServiceChanged() {
     if (mounted) {
       setState(() {});
+
+      // LSP 초기화 완료 시 문서 열기
+      if (widget.sessionManager.lspService.isInitialized) {
+        _openDocumentInLsp();
+      }
     }
+  }
+
+  // LSP 문서 열기
+  Future<void> _openDocumentInLsp() async {
+    if (!widget.sessionManager.lspService.isInitialized) {
+      return;
+    }
+
+    final codeEditorState = _codeEditorKey.currentState;
+    if (codeEditorState == null) return;
+
+    try {
+      await widget.sessionManager.lspService.openDocument(
+        _documentUri,
+        codeEditorState.text,
+      );
+      debugPrint('[IDE] Document opened in LSP');
+    } catch (e) {
+      debugPrint('[IDE] Failed to open document in LSP: $e');
+    }
+  }
+
+  // 커서 위치 변경 핸들러
+  void _onCursorPositionChanged(int line, int character) {
+    setState(() {
+      _cursorLine = line;
+      _cursorCharacter = character;
+    });
   }
 
   bool get _canSave => _needsSave && !_isSaving;
@@ -81,8 +124,8 @@ class _IdeScreenState extends State<IdeScreen> {
   Future<void> _saveCode() async {
     if (!_canSave) return;
 
-    final textInputState = _textInputKey.currentState;
-    if (textInputState == null) return;
+    final codeEditorState = _codeEditorKey.currentState;
+    if (codeEditorState == null) return;
 
     final sessionId = widget.sessionManager.sessionId;
     if (sessionId == null) return;
@@ -92,7 +135,7 @@ class _IdeScreenState extends State<IdeScreen> {
     });
 
     try {
-      await _sessionApi.updateFile(sessionId, textInputState.text);
+      await _sessionApi.updateFile(sessionId, codeEditorState.text);
       setState(() {
         _needsSave = false;
       });
@@ -165,19 +208,19 @@ class _IdeScreenState extends State<IdeScreen> {
   }
 
   void _handleKeyPress(KeyboardEvent event) {
-    final textInputState = _textInputKey.currentState;
-    if (textInputState == null) return;
+    final codeEditorState = _codeEditorKey.currentState;
+    if (codeEditorState == null) return;
 
     switch (event.type) {
       case KeyType.normal:
       case KeyType.space:
-        textInputState.addCharacter(event.character);
+        codeEditorState.addCharacter(event.character);
         setState(() {
           _needsSave = true;
         });
         break;
       case KeyType.backspace:
-        textInputState.deleteLastCharacter();
+        codeEditorState.deleteLastCharacter();
         setState(() {
           _needsSave = true;
         });
@@ -203,108 +246,75 @@ class _IdeScreenState extends State<IdeScreen> {
     }
   }
 
-  Future<void> _connectWebSocket() async {
-    final wsInfo = widget.sessionManager.websocketInfo;
-    final sessionId = widget.sessionManager.sessionId;
-
-    if (wsInfo == null || sessionId == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('세션이 준비되지 않았습니다')),
-        );
-      }
+  // Go to definition
+  Future<void> _goToDefinition() async {
+    if (!widget.sessionManager.lspService.isInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('LSP가 초기화되지 않았습니다')),
+      );
       return;
     }
 
-    await widget.sessionManager.lspService.connect(
-      url: wsInfo.url,
-      namespace: wsInfo.namespace,
-      sessionId: sessionId,
-    );
-  }
-
-  Future<void> _testPing() async {
-    await widget.sessionManager.lspService.sendPing('Hello from Flutter!');
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ping 전송됨 - 로그에서 pong 확인')),
+    try {
+      final definitions = await widget.sessionManager.lspService.goToDefinition(
+        uri: _documentUri,
+        line: _cursorLine,
+        character: _cursorCharacter,
       );
+
+      if (definitions == null || definitions.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('정의를 찾을 수 없습니다')),
+          );
+        }
+        return;
+      }
+
+      // Extract location from first definition
+      final firstDef = definitions[0] as Map<String, dynamic>;
+
+      // LSP can return either Location or LocationLink
+      // Location has 'range', LocationLink has 'targetRange' and 'targetSelectionRange'
+      Map<String, dynamic> range;
+      if (firstDef.containsKey('targetSelectionRange')) {
+        // LocationLink format
+        range = firstDef['targetSelectionRange'] as Map<String, dynamic>;
+      } else if (firstDef.containsKey('range')) {
+        // Location format
+        range = firstDef['range'] as Map<String, dynamic>;
+      } else {
+        throw Exception('Invalid definition format');
+      }
+
+      final start = range['start'] as Map<String, dynamic>;
+      final defLine = start['line'] as int;
+      final defCharacter = start['character'] as int;
+
+      // Move cursor to definition
+      final codeEditorState = _codeEditorKey.currentState;
+      if (codeEditorState != null) {
+        codeEditorState.moveCursorTo(defLine, defCharacter);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('정의로 이동: Ln $defLine, Col $defCharacter'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('정의 조회 실패: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-
-  Future<void> _initializeLsp() async {
-    await widget.sessionManager.lspService.initializeLsp();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('LSP 초기화 요청 전송됨')),
-      );
-    }
-  }
-
-  Widget _buildWebSocketTestSection() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'WebSocket 상태',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-
-            // 연결 상태 표시
-            Row(
-              children: [
-                Icon(
-                  widget.sessionManager.lspService.isConnected
-                      ? Icons.check_circle
-                      : Icons.error,
-                  color: widget.sessionManager.lspService.isConnected
-                      ? Colors.green
-                      : Colors.red,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.sessionManager.lspService.state.toString(),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // 버튼들
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ElevatedButton(
-                  onPressed: widget.sessionManager.lspService.isConnected
-                      ? null
-                      : _connectWebSocket,
-                  child: const Text('Connect'),
-                ),
-                ElevatedButton(
-                  onPressed: !widget.sessionManager.lspService.isConnected
-                      ? null
-                      : _testPing,
-                  child: const Text('Test Ping'),
-                ),
-                ElevatedButton(
-                  onPressed: !widget.sessionManager.lspService.isConnected
-                      ? null
-                      : _initializeLsp,
-                  child: const Text('Init LSP'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -313,6 +323,15 @@ class _IdeScreenState extends State<IdeScreen> {
       appBar: AppBar(
         title: const Text('Dart IDE'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.location_searching),
+            tooltip: 'Go to Definition',
+            onPressed: widget.sessionManager.lspService.isInitialized
+                ? _goToDefinition
+                : null,
+          ),
+        ],
       ),
       body: IndexedStack(
         index: _currentTabIndex,
@@ -350,18 +369,15 @@ class _IdeScreenState extends State<IdeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // WebSocket 테스트 섹션
-              _buildWebSocketTestSection(),
-              const SizedBox(height: 16),
-
-              // TextInputArea
-              TextInputArea(
-                key: _textInputKey,
+              // CodeEditor
+              CodeEditor(
+                key: _codeEditorKey,
                 onTextChanged: (_) {
                   setState(() {
                     _needsSave = true;
                   });
                 },
+                onCursorPositionChanged: _onCursorPositionChanged,
               ),
               const SizedBox(height: 16),
 
