@@ -121,17 +121,7 @@ class LspWebSocketService extends ChangeNotifier {
     }
 
     debugPrint('[LspWebSocket] Sending ping: $message');
-    debugPrint('[LspWebSocket] Socket connected: ${_socket?.connected}');
-    debugPrint('[LspWebSocket] Socket id: ${_socket?.id}');
-
-    // Try different payload formats
     _socket!.emit('ping', {'message': message});
-    debugPrint('[LspWebSocket] Ping emitted with object payload');
-
-    // Also try with just the string
-    await Future.delayed(const Duration(milliseconds: 100));
-    _socket!.emit('ping', message);
-    debugPrint('[LspWebSocket] Ping emitted with string payload');
   }
 
   /// Initialize LSP connection (after WebSocket connected)
