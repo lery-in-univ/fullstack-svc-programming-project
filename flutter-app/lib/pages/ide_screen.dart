@@ -53,6 +53,21 @@ class _IdeScreenState extends State<IdeScreen> {
     super.initState();
     _executionApi = ExecutionApi(widget.apiClient);
     _sessionApi = SessionApi(widget.apiClient);
+
+    // WebSocket 상태 변화 리스너 추가
+    widget.sessionManager.lspService.addListener(_onLspServiceChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.sessionManager.lspService.removeListener(_onLspServiceChanged);
+    super.dispose();
+  }
+
+  void _onLspServiceChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool get _canSave => _needsSave && !_isSaving;
@@ -188,6 +203,110 @@ class _IdeScreenState extends State<IdeScreen> {
     }
   }
 
+  Future<void> _connectWebSocket() async {
+    final wsInfo = widget.sessionManager.websocketInfo;
+    final sessionId = widget.sessionManager.sessionId;
+
+    if (wsInfo == null || sessionId == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('세션이 준비되지 않았습니다')),
+        );
+      }
+      return;
+    }
+
+    await widget.sessionManager.lspService.connect(
+      url: wsInfo.url,
+      namespace: wsInfo.namespace,
+      sessionId: sessionId,
+    );
+  }
+
+  Future<void> _testPing() async {
+    await widget.sessionManager.lspService.sendPing('Hello from Flutter!');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ping 전송됨 - 로그에서 pong 확인')),
+      );
+    }
+  }
+
+  Future<void> _initializeLsp() async {
+    await widget.sessionManager.lspService.initializeLsp();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('LSP 초기화 요청 전송됨')),
+      );
+    }
+  }
+
+  Widget _buildWebSocketTestSection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'WebSocket 상태',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+
+            // 연결 상태 표시
+            Row(
+              children: [
+                Icon(
+                  widget.sessionManager.lspService.isConnected
+                      ? Icons.check_circle
+                      : Icons.error,
+                  color: widget.sessionManager.lspService.isConnected
+                      ? Colors.green
+                      : Colors.red,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.sessionManager.lspService.state.toString(),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // 버튼들
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ElevatedButton(
+                  onPressed: widget.sessionManager.lspService.isConnected
+                      ? null
+                      : _connectWebSocket,
+                  child: const Text('Connect'),
+                ),
+                ElevatedButton(
+                  onPressed: !widget.sessionManager.lspService.isConnected
+                      ? null
+                      : _testPing,
+                  child: const Text('Test Ping'),
+                ),
+                ElevatedButton(
+                  onPressed: !widget.sessionManager.lspService.isConnected
+                      ? null
+                      : _initializeLsp,
+                  child: const Text('Init LSP'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -231,6 +350,10 @@ class _IdeScreenState extends State<IdeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // WebSocket 테스트 섹션
+              _buildWebSocketTestSection(),
+              const SizedBox(height: 16),
+
               // TextInputArea
               TextInputArea(
                 key: _textInputKey,

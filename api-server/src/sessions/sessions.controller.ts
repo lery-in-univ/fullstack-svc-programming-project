@@ -16,7 +16,16 @@ export class SessionsController {
 
   @Post('sessions')
   async createSession() {
-    return this.sessionsService.createSession();
+    const sessionData = await this.sessionsService.createSession();
+
+    return {
+      ...sessionData,
+      websocket: {
+        url: process.env.WEBSOCKET_URL || 'http://localhost:3000',
+        namespace: '/lsp',
+        path: '/socket.io/',
+      },
+    };
   }
 
   @Put('/sessions/:sessionId/files')

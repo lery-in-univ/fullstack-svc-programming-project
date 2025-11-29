@@ -39,6 +39,23 @@ export class LanguageServerGateway
 
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
+
+    // Debug: Log all incoming events
+    client.onAny((eventName, ...args) => {
+      this.logger.log(
+        `[Event] ${eventName} from ${client.id}:`,
+        JSON.stringify(args),
+      );
+    });
+
+    // Test: Send a welcome message to the client
+    setTimeout(() => {
+      this.logger.log(`Sending test pong to ${client.id}`);
+      client.emit('pong', {
+        message: 'Welcome from server!',
+        timestamp: new Date().toISOString(),
+      });
+    }, 1000);
   }
 
   handleDisconnect(client: Socket) {
@@ -173,5 +190,19 @@ export class LanguageServerGateway
       this.logger.error('Failed to send message to LSP', error);
       client.emit('lsp-error', { error: 'Failed to send message', code: 500 });
     }
+  }
+
+  @SubscribeMessage('ping')
+  handlePing(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: any,
+  ) {
+    this.logger.log(
+      `Ping received from ${client.id}: ${JSON.stringify(payload)}`,
+    );
+    client.emit('pong', {
+      message: payload?.message || 'no message',
+      timestamp: new Date().toISOString(),
+    });
   }
 }
