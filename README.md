@@ -11,30 +11,50 @@
 ## 시스템 아키텍처
 
 ```mermaid
-graph LR
-    CLI[CLI<br/>Dart]
-    API[API Server<br/>NestJS]
+graph TB
+    CLI[Dart CLI<br/>Dart]
+    FLUTTER[Flutter App<br/>Flutter/Dart]
+    API[API Server<br/>NestJS<br/>Port: 3000]
     WORKER[Worker Service<br/>NestJS]
-    MYSQL[(MySQL)]
-    REDIS[(Redis)]
-    DOCKER[Docker<br/>Containers]
+    MYSQL[(MySQL 8.4<br/>Port: 3306)]
+    REDIS[(Redis 8.2<br/>Port: 6379)]
+    VOLUME[/code-files<br/>Volume/]
+
+    subgraph CONTAINERS["Docker Containers (Dynamic)"]
+        RUNNER[Code Runner<br/>Dart Execution<br/>256MB RAM, 0.5 CPU<br/>30s timeout]
+        LSP[Dart LSP Server<br/>Language Server Protocol<br/>Go to Definition]
+    end
 
     CLI -->|HTTP/REST| API
     CLI -->|WebSocket| API
+    FLUTTER -->|HTTP/REST| API
+    FLUTTER -->|WebSocket| API
     API --> MYSQL
     API --> REDIS
+    API -.->|Mount| VOLUME
+    API <-.->|LSP Session| LSP
     WORKER --> MYSQL
     WORKER --> REDIS
-    WORKER --> DOCKER
+    WORKER -.->|Mount| VOLUME
+    WORKER -->|Create & Manage| RUNNER
+    WORKER -->|Create & Manage| LSP
+    RUNNER -.->|Mount| VOLUME
+    LSP -.->|Mount| VOLUME
 ```
 
 ## 주요 컴포넌트
 
-### 1. CLI (Command-Line Interface)
+### 1. 클라이언트
 
+#### Dart CLI
 - **언어**: Dart 3.9+
-- **기능**: 사용자 인증, 코드 실행, LSP 통합
+- **기능**: 터미널 환경에서 코드 실행 및 LSP 통합
 - **주요 라이브러리**: dio, socket_io_client, dart_console
+
+#### Flutter App
+- **언어**: Dart 3.9+ / Flutter
+- **기능**: 모바일 환경에서 코드 편집 및 실행
+- **주요 라이브러리**: flutter, dio, socket_io_client
 
 ### 2. API Server
 
@@ -44,11 +64,12 @@ graph LR
   - REST API 제공 (인증, 사용자 관리, 코드 실행)
   - WebSocket을 통한 LSP 게이트웨이
   - 작업 큐 관리 (BullMQ)
+  - 파일 업로드 처리
 - **주요 모듈**:
-  - Auth Module: JWT 기반 인증
   - Execution Module: 코드 실행 작업 관리
   - Language Server Module: LSP 세션 및 WebSocket 통신
   - Queue Module: BullMQ 통합
+  - Sessions Module: 사용자 세션 관리
 
 ### 3. Worker Service
 
@@ -79,7 +100,8 @@ graph LR
 
 | 레이어           | 기술                                      |
 | ---------------- | ----------------------------------------- |
-| **CLI**          | Dart, dio, socket_io_client, dart_console |
+| **Dart CLI**     | Dart, dio, socket_io_client, dart_console |
+| **Flutter App**  | Flutter, Dart, dio, socket_io_client      |
 | **Backend**      | NestJS, TypeScript, Express               |
 | **WebSocket**    | Socket.io                                 |
 | **데이터베이스** | MySQL 8.4, TypeORM                        |
@@ -97,10 +119,16 @@ graph LR
 docker compose up
 ```
 
-CLI 실행 (cli 디렉토리에서):
+Dart CLI 실행 (cli 디렉토리에서):
 
 ```sh
 dart bin/main.dart --base-url http://localhost:3000
+```
+
+Flutter App 실행 (flutter-app 디렉토리에서):
+
+```sh
+flutter run
 ```
 
 ## 라이선스
