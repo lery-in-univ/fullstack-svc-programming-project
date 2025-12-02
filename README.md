@@ -47,11 +47,13 @@ graph TB
 ### 1. 클라이언트
 
 #### Dart CLI
+
 - **언어**: Dart 3.9+
 - **기능**: 터미널 환경에서 코드 실행 및 LSP 통합
 - **주요 라이브러리**: dio, socket_io_client, dart_console
 
 #### Flutter App
+
 - **언어**: Dart 3.9+ / Flutter
 - **기능**: 모바일 환경에서 코드 편집 및 실행
 - **주요 라이브러리**: flutter, dio, socket_io_client
@@ -116,6 +118,7 @@ graph TB
 백엔드 실행:
 
 ```sh
+sh ./init.sh
 docker compose up
 ```
 
