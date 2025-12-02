@@ -74,10 +74,8 @@ class CodeEditorState extends State<CodeEditor> {
   }
 
   /// Get current cursor position
-  ({int line, int character}) get cursorPosition => (
-        line: _currentLine,
-        character: _currentCharacter,
-      );
+  ({int line, int character}) get cursorPosition =>
+      (line: _currentLine, character: _currentCharacter);
 
   /// Get current text
   String get text => _controller.text;
@@ -132,11 +130,7 @@ class CodeEditorState extends State<CodeEditor> {
       );
     } else {
       // Delete selection
-      final newText = text.replaceRange(
-        selection.start,
-        selection.end,
-        '',
-      );
+      final newText = text.replaceRange(selection.start, selection.end, '');
       _controller.value = TextEditingValue(
         text: newText,
         selection: TextSelection.collapsed(offset: selection.start),
@@ -177,59 +171,33 @@ class CodeEditorState extends State<CodeEditor> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
-          width: 1.0,
-        ),
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(4.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Code Editor',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              // Show cursor position
-              Text(
-                'Ln $_currentLine, Col $_currentCharacter',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8.0),
-          TextField(
-            controller: _controller,
-            focusNode: _focusNode,
-            maxLines: null,
-            minLines: 10,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 14,
-            ),
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'void main() {\n  print("Hello, Dart!");\n}',
-              hintStyle: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 14,
+          // TextField - 스크롤 가능
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                maxLines: null,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 14),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'void main() {\n  print("Hello, Dart!");\n}',
+                  hintStyle: TextStyle(fontFamily: 'monospace', fontSize: 14),
+                ),
+                onTap: _updateCursorPosition,
+                onChanged: (_) {
+                  // Handled by _controller listener
+                },
               ),
             ),
-            onTap: _updateCursorPosition,
-            onChanged: (_) {
-              // Handled by _controller listener
-            },
           ),
         ],
       ),

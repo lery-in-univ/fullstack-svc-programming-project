@@ -52,8 +52,13 @@ class KeyboardRow extends StatelessWidget {
   String _getDisplayLabel(String key) {
     if (key.toLowerCase() == 'backspace' ||
         key.toLowerCase() == 'shift' ||
-        key.toLowerCase() == 'space') {
+        key.toLowerCase() == 'space' ||
+        key.toLowerCase() == 'enter') {
       return key;
+    }
+    // Check if key has a shift mapping
+    if (isShiftActive && KeyboardConfig.shiftMap.containsKey(key)) {
+      return KeyboardConfig.shiftMap[key]!;
     }
     return isShiftActive ? key.toUpperCase() : key;
   }
@@ -63,7 +68,8 @@ class KeyboardRow extends StatelessWidget {
     final lowerKey = key.toLowerCase();
     return lowerKey == 'backspace' ||
         lowerKey == 'shift' ||
-        lowerKey == 'space';
+        lowerKey == 'space' ||
+        lowerKey == 'enter';
   }
 
   /// Gets the width for a specific key based on ratios
@@ -74,7 +80,8 @@ class KeyboardRow extends StatelessWidget {
     if (lowerKey == KeyboardConfig.spaceKey) {
       return baseWidth * KeyboardConfig.spaceKeyRatio;
     } else if (lowerKey == KeyboardConfig.backspaceKey ||
-        lowerKey == KeyboardConfig.shiftKey) {
+        lowerKey == KeyboardConfig.shiftKey ||
+        lowerKey == KeyboardConfig.enterKey) {
       return baseWidth * KeyboardConfig.specialKeyRatio;
     }
     return baseWidth * KeyboardConfig.normalKeyRatio;

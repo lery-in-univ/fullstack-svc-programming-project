@@ -7,13 +7,7 @@ import '../models/key_event.dart';
 import '../widgets/keyboard/qwerty_keyboard.dart';
 import '../widgets/code_editor.dart';
 
-enum ExecutionStatus {
-  idle,
-  submitting,
-  polling,
-  completed,
-  error,
-}
+enum ExecutionStatus { idle, submitting, polling, completed, error }
 
 class IdeScreen extends StatefulWidget {
   final SessionManager sessionManager;
@@ -151,10 +145,7 @@ class _IdeScreenState extends State<IdeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('저장 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('저장 실패: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -249,9 +240,9 @@ class _IdeScreenState extends State<IdeScreen> {
   // Go to definition
   Future<void> _goToDefinition() async {
     if (!widget.sessionManager.lspService.isInitialized) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('LSP가 초기화되지 않았습니다')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('LSP가 초기화되지 않았습니다')));
       return;
     }
 
@@ -264,9 +255,9 @@ class _IdeScreenState extends State<IdeScreen> {
 
       if (definitions == null || definitions.isEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('정의를 찾을 수 없습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('정의를 찾을 수 없습니다')));
         }
         return;
       }
@@ -308,10 +299,7 @@ class _IdeScreenState extends State<IdeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('정의 조회 실패: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('정의 조회 실패: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -320,9 +308,11 @@ class _IdeScreenState extends State<IdeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Dart IDE'),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.location_searching),
@@ -331,16 +321,41 @@ class _IdeScreenState extends State<IdeScreen> {
                 ? _goToDefinition
                 : null,
           ),
+          IconButton(
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.save),
+            tooltip: _isSaving ? '저장 중...' : '저장',
+            onPressed: _canSave ? _saveCode : null,
+          ),
+          IconButton(
+            icon:
+                _executionStatus == ExecutionStatus.submitting ||
+                    _executionStatus == ExecutionStatus.polling
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.play_arrow),
+            tooltip: _getExecuteButtonText(),
+            onPressed: _canExecute ? _executeCode : null,
+          ),
         ],
       ),
       body: IndexedStack(
         index: _currentTabIndex,
-        children: [
-          _buildEditorTab(),
-          _buildResultsTab(),
-        ],
+        children: [_buildEditorTab(), _buildResultsTab()],
       ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
         currentIndex: _currentTabIndex,
         onTap: (index) {
           setState(() {
@@ -348,14 +363,8 @@ class _IdeScreenState extends State<IdeScreen> {
           });
         },
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.code),
-            label: 'Editor',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.output),
-            label: 'Results',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.code), label: ''),
+          BottomNavigationBarItem(icon: Icon(Icons.terminal), label: ''),
         ],
       ),
     );
@@ -363,14 +372,13 @@ class _IdeScreenState extends State<IdeScreen> {
 
   Widget _buildEditorTab() {
     return SafeArea(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // CodeEditor
-              CodeEditor(
+      child: Column(
+        children: [
+          // CodeEditor - 남은 공간 모두 차지
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CodeEditor(
                 key: _codeEditorKey,
                 onTextChanged: (_) {
                   setState(() {
@@ -379,75 +387,10 @@ class _IdeScreenState extends State<IdeScreen> {
                 },
                 onCursorPositionChanged: _onCursorPositionChanged,
               ),
-              const SizedBox(height: 16),
-
-              // 저장/실행 버튼
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _canSave ? _saveCode : null,
-                      icon: _isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(_isSaving ? '저장 중...' : '저장'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _canExecute ? _executeCode : null,
-                      icon: _executionStatus == ExecutionStatus.submitting ||
-                              _executionStatus == ExecutionStatus.polling
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.play_arrow),
-                      label: Text(_getExecuteButtonText()),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // 상태 안내
-              if (_needsSave)
-                Card(
-                  color: Colors.orange.shade50,
-                  child: const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.warning_amber, color: Colors.orange),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child:
-                              Text('변경사항이 있습니다. 실행하려면 먼저 저장하세요.'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 16),
-
-              // QwertyKeyboard
-              QwertyKeyboard(
-                onKeyPressed: _handleKeyPress,
-              ),
-            ],
+            ),
           ),
-        ),
+          QwertyKeyboard(onKeyPressed: _handleKeyPress),
+        ],
       ),
     );
   }

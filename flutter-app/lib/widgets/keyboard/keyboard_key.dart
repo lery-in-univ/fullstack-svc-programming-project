@@ -40,20 +40,19 @@ class KeyboardKey extends StatelessWidget {
 
     // Determine key colors based on state
     final backgroundColor = _getBackgroundColor(theme);
-    final textColor = _getTextColor(theme);
 
     return Container(
       width: width,
-      height: height ?? 50.0,
+      height: height ?? 42.0,
       margin: const EdgeInsets.all(1.0),
       child: Material(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(6.0),
-        elevation: 2.0,
+        elevation: 0.0,
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(6.0),
-          child: Center(child: _buildKeyContent(textColor)),
+          child: Center(child: _buildKeyContent(Colors.black)),
         ),
       ),
     );
@@ -68,6 +67,8 @@ class KeyboardKey extends StatelessWidget {
       return Icon(Icons.arrow_upward, color: textColor, size: 20.0);
     } else if (label.toLowerCase() == 'space') {
       return const SizedBox.shrink(); // Empty for space key
+    } else if (label.toLowerCase() == 'enter') {
+      return Icon(Icons.keyboard_return, color: textColor, size: 20.0);
     }
 
     // Regular text key
@@ -85,21 +86,10 @@ class KeyboardKey extends StatelessWidget {
   Color _getBackgroundColor(ThemeData theme) {
     if (isSpecialKey) {
       if (isShiftActive && label.toLowerCase() == 'shift') {
-        return theme.colorScheme.primary;
+        return Colors.grey.shade500;
       }
-      return theme.colorScheme.secondaryContainer;
+      return Colors.grey.shade300;
     }
-    return theme.colorScheme.surface;
-  }
-
-  /// Determines the text color based on key state
-  Color _getTextColor(ThemeData theme) {
-    if (isSpecialKey && isShiftActive && label.toLowerCase() == 'shift') {
-      return theme.colorScheme.onPrimary;
-    }
-    if (isSpecialKey) {
-      return theme.colorScheme.onSecondaryContainer;
-    }
-    return theme.colorScheme.onSurface;
+    return Colors.grey.shade100;
   }
 }

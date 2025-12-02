@@ -78,8 +78,22 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
       return;
     }
 
+    if (lowerKey == KeyboardConfig.enterKey) {
+      widget.onKeyPressed(
+        const KeyboardEvent(character: '\n', type: KeyType.normal),
+      );
+      return;
+    }
+
     // Handle normal character keys
-    final character = _keyboardState.isShiftActive ? key.toUpperCase() : key;
+    String character;
+    // Check if key has a shift mapping
+    if (_keyboardState.isShiftActive && KeyboardConfig.shiftMap.containsKey(key)) {
+      character = KeyboardConfig.shiftMap[key]!;
+    } else {
+      character = _keyboardState.isShiftActive ? key.toUpperCase() : key;
+    }
+
     widget.onKeyPressed(
       KeyboardEvent(
         character: character,
@@ -108,7 +122,7 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     return Container(
       padding: const EdgeInsets.all(8.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(12.0),
       ),
       child: Column(
@@ -145,18 +159,9 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
           ),
           const SizedBox(height: KeyboardConfig.rowSpacing),
 
-          // Row 4: ( ) { } ; '
+          // Row 4: ( ) [Space] ; ' [Enter]
           KeyboardRow(
             keys: KeyboardConfig.qwertyLayout[3],
-            onKeyPressed: _handleKeyPress,
-            isShiftActive: _keyboardState.isShiftActive,
-            keyWidth: baseKeyWidth,
-          ),
-          const SizedBox(height: KeyboardConfig.rowSpacing),
-
-          // Row 5: [Space]
-          KeyboardRow(
-            keys: [KeyboardConfig.spaceKey],
             onKeyPressed: _handleKeyPress,
             isShiftActive: _keyboardState.isShiftActive,
             keyWidth: baseKeyWidth,
