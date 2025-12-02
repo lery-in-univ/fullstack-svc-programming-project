@@ -396,140 +396,43 @@ class _IdeScreenState extends State<IdeScreen> {
   }
 
   Widget _buildResultsTab() {
+    // 출력이나 에러 중 존재하는 것만 표시
+    final hasOutput = _output != null && _output!.isNotEmpty;
+    final hasError = _error != null && _error!.isNotEmpty;
+    final hasErrorMessage = _errorMessage != null;
+
+    String displayContent = '';
+    if (hasOutput) {
+      displayContent = _output!;
+    } else if (hasError) {
+      displayContent = _error!;
+    } else if (hasErrorMessage) {
+      displayContent = _errorMessage!;
+    } else {
+      displayContent = '(결과 없음)';
+    }
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 출력
-            _buildResultCard(
-              '출력',
-              _output ?? '(없음)',
-              Icons.terminal,
-              Colors.green,
-            ),
-            const SizedBox(height: 16),
-
-            // 에러
-            _buildResultCard(
-              '에러',
-              _error ?? '(없음)',
-              Icons.error_outline,
-              Colors.red,
-            ),
-            const SizedBox(height: 16),
-
-            // Exit Code
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.exit_to_app),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Exit Code',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _exitCode?.toString() ?? '-',
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 에러 메시지
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 16),
-              Card(
-                color: Colors.red.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.error, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text(
-                            '오류',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(_errorMessage!),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResultCard(
-    String title,
-    String content,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: SelectableText(
-                content,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                  fontSize: 13,
-                ),
+        padding: const EdgeInsets.all(8.0),
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade900,
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              displayContent,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                color: Colors.white,
+                fontSize: 13,
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -52,6 +52,11 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
     final lowerKey = key.toLowerCase();
 
     // Handle special keys
+    if (lowerKey == KeyboardConfig.symbolToggleKey) {
+      _keyboardState.toggleSymbolMode();
+      return;
+    }
+
     if (lowerKey == KeyboardConfig.shiftKey) {
       _keyboardState.toggleShift();
       widget.onKeyPressed(
@@ -82,6 +87,11 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
       widget.onKeyPressed(
         const KeyboardEvent(character: '\n', type: KeyType.normal),
       );
+      return;
+    }
+
+    // Ignore empty string keys
+    if (key.isEmpty) {
       return;
     }
 
@@ -118,6 +128,9 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
   @override
   Widget build(BuildContext context) {
     final baseKeyWidth = _calculateBaseKeyWidth(context);
+    final layout = _keyboardState.isSymbolMode
+        ? KeyboardConfig.symbolLayout
+        : KeyboardConfig.qwertyLayout;
 
     return Container(
       padding: const EdgeInsets.all(8.0),
@@ -128,29 +141,29 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Row 1: Q W E R T Y U I O P
+          // Row 1
           KeyboardRow(
-            keys: KeyboardConfig.qwertyLayout[0],
+            keys: layout[0],
             onKeyPressed: _handleKeyPress,
             isShiftActive: _keyboardState.isShiftActive,
             keyWidth: baseKeyWidth,
           ),
           const SizedBox(height: KeyboardConfig.rowSpacing),
 
-          // Row 2: A S D F G H J K L
+          // Row 2
           KeyboardRow(
-            keys: KeyboardConfig.qwertyLayout[1],
+            keys: layout[1],
             onKeyPressed: _handleKeyPress,
             isShiftActive: _keyboardState.isShiftActive,
             keyWidth: baseKeyWidth,
           ),
           const SizedBox(height: KeyboardConfig.rowSpacing),
 
-          // Row 3: [Shift] Z X C V B N M [Backspace]
+          // Row 3: [Shift] ... [Backspace]
           KeyboardRow(
             keys: [
               KeyboardConfig.shiftKey,
-              ...KeyboardConfig.qwertyLayout[2],
+              ...layout[2],
               KeyboardConfig.backspaceKey,
             ],
             onKeyPressed: _handleKeyPress,
@@ -159,9 +172,12 @@ class _QwertyKeyboardState extends State<QwertyKeyboard> {
           ),
           const SizedBox(height: KeyboardConfig.rowSpacing),
 
-          // Row 4: ( ) [Space] ; ' [Enter]
+          // Row 4: [Symbol/ABC] [Space] [Enter]
           KeyboardRow(
-            keys: KeyboardConfig.qwertyLayout[3],
+            keys: [
+              KeyboardConfig.symbolToggleKey,
+              ...layout[3],
+            ],
             onKeyPressed: _handleKeyPress,
             isShiftActive: _keyboardState.isShiftActive,
             keyWidth: baseKeyWidth,

@@ -53,7 +53,8 @@ class KeyboardRow extends StatelessWidget {
     if (key.toLowerCase() == 'backspace' ||
         key.toLowerCase() == 'shift' ||
         key.toLowerCase() == 'space' ||
-        key.toLowerCase() == 'enter') {
+        key.toLowerCase() == 'enter' ||
+        key.toLowerCase() == 'symbol_toggle') {
       return key;
     }
     // Check if key has a shift mapping
@@ -69,7 +70,8 @@ class KeyboardRow extends StatelessWidget {
     return lowerKey == 'backspace' ||
         lowerKey == 'shift' ||
         lowerKey == 'space' ||
-        lowerKey == 'enter';
+        lowerKey == 'enter' ||
+        lowerKey == 'symbol_toggle';
   }
 
   /// Gets the width for a specific key based on ratios
@@ -81,7 +83,8 @@ class KeyboardRow extends StatelessWidget {
       return baseWidth * KeyboardConfig.spaceKeyRatio;
     } else if (lowerKey == KeyboardConfig.backspaceKey ||
         lowerKey == KeyboardConfig.shiftKey ||
-        lowerKey == KeyboardConfig.enterKey) {
+        lowerKey == KeyboardConfig.enterKey ||
+        lowerKey == KeyboardConfig.symbolToggleKey) {
       return baseWidth * KeyboardConfig.specialKeyRatio;
     }
     return baseWidth * KeyboardConfig.normalKeyRatio;

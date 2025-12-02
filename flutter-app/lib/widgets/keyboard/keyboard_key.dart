@@ -43,7 +43,7 @@ class KeyboardKey extends StatelessWidget {
 
     return Container(
       width: width,
-      height: height ?? 42.0,
+      height: height ?? 40.0,
       margin: const EdgeInsets.all(1.0),
       child: Material(
         color: backgroundColor,
@@ -69,6 +69,17 @@ class KeyboardKey extends StatelessWidget {
       return const SizedBox.shrink(); // Empty for space key
     } else if (label.toLowerCase() == 'enter') {
       return Icon(Icons.keyboard_return, color: textColor, size: 20.0);
+    } else if (label.toLowerCase() == 'symbol_toggle') {
+      return Text(
+        '123',
+        style: TextStyle(
+          color: textColor,
+          fontSize: 14.0,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    } else if (label.isEmpty) {
+      return const SizedBox.shrink(); // Empty for blank keys
     }
 
     // Regular text key

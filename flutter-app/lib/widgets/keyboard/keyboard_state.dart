@@ -6,13 +6,23 @@ import 'package:flutter/foundation.dart';
 /// and provides methods to update the state.
 class KeyboardState extends ChangeNotifier {
   bool _isShiftActive = false;
+  bool _isSymbolMode = false;
 
   /// Whether shift is currently active
   bool get isShiftActive => _isShiftActive;
 
+  /// Whether symbol mode is currently active
+  bool get isSymbolMode => _isSymbolMode;
+
   /// Toggles the shift state
   void toggleShift() {
     _isShiftActive = !_isShiftActive;
+    notifyListeners();
+  }
+
+  /// Toggles the symbol mode state
+  void toggleSymbolMode() {
+    _isSymbolMode = !_isSymbolMode;
     notifyListeners();
   }
 
@@ -35,6 +45,7 @@ class KeyboardState extends ChangeNotifier {
   /// Resets the keyboard state to default
   void reset() {
     _isShiftActive = false;
+    _isSymbolMode = false;
     notifyListeners();
   }
 }
