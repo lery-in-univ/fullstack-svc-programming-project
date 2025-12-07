@@ -22,7 +22,7 @@ services:
   worker:
     build:
       context: ./worker-service
-      dockerfile: Dockerfile.Debug
+      dockerfile: Dockerfile
     container_name: worker-service
     depends_on:
       mysql:
