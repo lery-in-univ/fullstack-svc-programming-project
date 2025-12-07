@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Controller,
   Get,
   NotFoundException,
@@ -15,13 +14,9 @@ import { ExecutionJobStatusLog } from 'src/entities/execution-job-status-log.ent
 export class ExecutionController {
   constructor(private readonly executionService: ExecutionService) {}
 
-  @Post('/execution-jobs')
-  async createExecutionJob(@Body() body: { sessionId: string }) {
-    if (!body.sessionId) {
-      throw new BadRequestException('sessionId is required');
-    }
-
-    const job = await this.executionService.createExecutionJob(body.sessionId);
+  @Post('/sessions/:sessionId/execution-jobs')
+  async createExecutionJob(@Param('sessionId') sessionId: string) {
+    const job = await this.executionService.createExecutionJob(sessionId);
 
     return {
       id: job.id,

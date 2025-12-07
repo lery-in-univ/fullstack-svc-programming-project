@@ -11,8 +11,7 @@ class ExecutionApi {
   /// POST /execution-jobs - 코드 실행 제출
   Future<ExecutionJobCreated> submitCode(String sessionId) async {
     final response = await apiClient.post(
-      '/execution-jobs',
-      data: {'sessionId': sessionId},
+      '/sessions/$sessionId/execution-jobs',
     );
     return ExecutionJobCreated.fromJson(response.data);
   }
