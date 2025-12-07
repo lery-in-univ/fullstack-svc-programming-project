@@ -10,11 +10,11 @@ import { promises as fs } from "fs";
 import { join } from "path";
 
 interface SessionData {
-  userId: string;
+  lastActivity: string;
+  workspaceRoot?: string;
   containerId?: string;
   containerName?: string;
   createdAt: string;
-  workspaceRoot?: string;
 }
 
 @Injectable()
@@ -80,7 +80,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
         const sessionData: SessionData = JSON.parse(data);
 
         if (!sessionData.containerId) {
-          await this.startContainer(sessionId, sessionData.userId);
+          await this.startContainer(sessionId);
         } else {
           this.containerMap.set(sessionId, sessionData.containerId);
         }
@@ -93,10 +93,7 @@ export class LanguageServerManager implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async startContainer(
-    sessionId: string,
-    userId: string
-  ): Promise<void> {
+  private async startContainer(sessionId: string): Promise<void> {
     this.logger.log(`Starting container for session ${sessionId}`);
 
     const containerName = `lsp-${sessionId}`;

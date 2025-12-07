@@ -11,13 +11,11 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 
 export interface SessionData {
-  sessionId: string;
-  createdAt: string;
   lastActivity: string;
   workspaceRoot: string;
-  uploadedFiles: string[];
-  status: 'pending' | 'ready' | 'terminated';
   containerId?: string;
+  containerName?: string;
+  createdAt: string;
 }
 
 @Injectable()
@@ -92,12 +90,9 @@ export class SessionsService implements OnModuleInit, OnModuleDestroy {
 
     // Initialize session data
     const sessionData: SessionData = {
-      sessionId,
       createdAt: new Date().toISOString(),
       lastActivity: new Date().toISOString(),
       workspaceRoot: `/code-files/${sessionId}`,
-      uploadedFiles: ['main.dart'],
-      status: 'pending',
     };
 
     // Store in Redis with TTL
